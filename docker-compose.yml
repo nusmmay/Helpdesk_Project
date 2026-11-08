@@ -1,0 +1,56 @@
+
+
+services:
+  db:
+    image: mariadb:10.11
+    environment:
+      MARIADB_ROOT_PASSWORD: rootpass
+      MARIADB_DATABASE: glpi
+      MARIADB_USER: glpiuser
+      MARIADB_PASSWORD: glpipass
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - helpdesk_net
+
+  glpi:
+    image: diouxx/glpi:latest
+    platform: linux/amd64
+    depends_on:
+      - db
+    volumes:
+      - glpi_data:/var/www/html/glpi
+    networks:
+      - helpdesk_net
+
+  web:
+    image: nginx:alpine
+    volumes:
+      - glpi_data:/var/www/html/glpi
+    depends_on:
+      - glpi
+    networks:
+      - helpdesk_net
+
+  proxy:
+    build: .
+    ports:
+      - "80:80"
+    depends_on:
+      - web
+    networks:
+      - helpdesk_net
+
+  cron:
+    image: alpine:latest
+    command: sh -c "while true; do echo 'Running'; sleep 3600; done"
+    networks:
+      - helpdesk_net
+
+volumes:
+  db_data:
+  glpi_data:
+
+networks:
+  helpdesk_net:
+    driver: bridge
